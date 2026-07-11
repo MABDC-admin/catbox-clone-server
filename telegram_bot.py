@@ -19,6 +19,8 @@ def handle_message(message):
     if url_match:
         target_url = url_match.group(1)
         is_mp3 = "mp3" in text.lower()
+        is_youtube = "youtube.com" in target_url or "youtu.be" in target_url
+        concurrent_frags = 16 if is_youtube else 1
         
         msg = "⏳ Downloading audio (MP3)..." if is_mp3 else "⏳ Downloading video..."
         bot.reply_to(message, msg)
@@ -32,7 +34,7 @@ def handle_message(message):
                         'outtmpl': os.path.join(UPLOAD_DIR, '%(id)s.%(ext)s'),
                         'noplaylist': True,
                         'quiet': True,
-                        'concurrent_fragment_downloads': 16,
+                        'concurrent_fragment_downloads': concurrent_frags,
                         'postprocessors': [{
                             'key': 'FFmpegExtractAudio',
                             'preferredcodec': 'mp3',
@@ -46,7 +48,7 @@ def handle_message(message):
                         'outtmpl': os.path.join(UPLOAD_DIR, '%(id)s.%(ext)s'),
                         'noplaylist': True,
                         'quiet': True,
-                        'concurrent_fragment_downloads': 16,
+                        'concurrent_fragment_downloads': concurrent_frags,
                         'postprocessor_args': ['-threads', '4']
                     }
                 
