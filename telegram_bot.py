@@ -39,9 +39,9 @@ def handle_message(message):
                     
                     public_url = PUBLIC_URL_PREFIX + basename
                     
-                    bot.reply_to(message, f"✅ **Download Complete!**\n\nHere is your permanent streaming link:\n\n{public_url}", parse_mode="Markdown")
+                    bot.reply_to(message, f"✅ Download Complete!\n\nHere is your permanent streaming link:\n\n{public_url}")
             except Exception as e:
-                bot.reply_to(message, f"❌ Failed to download:\n`{str(e)}`", parse_mode="Markdown")
+                bot.reply_to(message, f"❌ Failed to download:\n{str(e)}")
                 
         threading.Thread(target=download).start()
     else:
