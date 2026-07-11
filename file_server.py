@@ -224,9 +224,30 @@ HTML_TEMPLATE = """
         xhr.onload = function() {
             if (xhr.status === 200) {
                 const res = JSON.parse(xhr.responseText);
+                const dlUrl = res.url + '?dl=1';
+                
+                let httpUrl = res.url;
+                if(httpUrl.startsWith('https://')) {
+                    httpUrl = 'http://' + httpUrl.substring(8);
+                }
+
                 document.getElementById('progressContainer').style.display = 'none';
                 document.getElementById('result').style.display = 'block';
-                document.getElementById('result').innerHTML = `Upload successful!<br><br><a href="${res.url}" target="_blank">${res.url}</a>`;
+                document.getElementById('result').innerHTML = `
+                    <div style="color: #34d399; font-weight: 800; font-size: 1.2rem; margin-bottom: 1rem;">✅ Upload Successful!</div>
+                    
+                    <div style="text-align: left; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800;">Direct Link</span><br>
+                        <a href="${res.url}" target="_blank" style="word-break: break-all;">${res.url}</a>
+                    </div>
+                    
+                    <div style="text-align: left; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 800;">HTTP Fallback Link</span><br>
+                        <a href="${httpUrl}" target="_blank" style="word-break: break-all;">${httpUrl}</a>
+                    </div>
+
+                    <a href="${dlUrl}" class="btn" style="display:inline-block; text-decoration:none; width: auto; padding: 0.5rem 1rem;">⬇️ Download File</a>
+                `;
             } else {
                 alert('Upload failed!');
                 uploadBtn.disabled = false;
@@ -268,7 +289,9 @@ def upload():
 @app.route('/f/<filename>')
 def download(filename):
     # This automatically serves files inline (directly playable) exactly like Catbox.moe
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    # If ?dl=1 is passed, it forces the browser to download it as an attachment
+    force_download = request.args.get('dl') == '1'
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=force_download)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
