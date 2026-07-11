@@ -44,7 +44,7 @@ def ensure_bucket():
 
 ensure_bucket()
 
-UPLOAD_DIR = "/home/admin/catbox-clone-server/uploads"
+UPLOAD_DIR = "/root/catbox-clone-server/uploads"
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
@@ -142,7 +142,7 @@ CLEANUP_CODE = """
 import os
 import time
 
-UPLOAD_DIR = "/home/admin/catbox-clone-server/uploads"
+UPLOAD_DIR = "/root/catbox-clone-server/uploads"
 ONE_DAY = 24 * 60 * 60
 
 now = time.time()
@@ -160,28 +160,32 @@ def main():
     print("Connecting to VPS...")
     c = paramiko.SSHClient()
     c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    c.connect('92.113.151.24', username='admin', password='Denskie123')
+    c.connect('100.124.32.11', username='root', port=1988, key_filename='C:/Users/DENNIS/Downloads/95.217/minio_root_ed25519')
 
     print("Writing telegram_bot.py...")
     sftp = c.open_sftp()
-    with sftp.file('/home/admin/catbox-clone-server/telegram_bot.py', 'w') as f:
+    
+    # Ensure directory exists on new VPS
+    c.exec_command('mkdir -p /root/catbox-clone-server/uploads')
+    
+    with sftp.file('/root/catbox-clone-server/telegram_bot.py', 'w') as f:
         f.write(BOT_CODE.strip())
     
     print("Writing cleanup.py...")
-    with sftp.file('/home/admin/catbox-clone-server/cleanup.py', 'w') as f:
+    with sftp.file('/root/catbox-clone-server/cleanup.py', 'w') as f:
         f.write(CLEANUP_CODE.strip())
         
     sftp.close()
 
     commands = [
-        "cd /home/admin/catbox-clone-server && ./venv/bin/pip install pyTelegramBotAPI yt-dlp curl-cffi flask minio",
+        "cd /root/catbox-clone-server && python3 -m venv venv && ./venv/bin/pip install pyTelegramBotAPI yt-dlp curl-cffi flask minio",
         "pkill -f 'python telegram_bot.py'",
         "sleep 1",
-        "cd /home/admin/catbox-clone-server && nohup ./venv/bin/python telegram_bot.py > bot.log 2>&1 &",
+        "cd /root/catbox-clone-server && nohup ./venv/bin/python telegram_bot.py > bot.log 2>&1 &",
         "sleep 2",
         "ps aux | grep telegram_bot",
         "crontab -l 2>/dev/null | grep -v cleanup.py | crontab -",
-        "(crontab -l 2>/dev/null; echo '0 0 * * * /home/admin/catbox-clone-server/venv/bin/python /home/admin/catbox-clone-server/cleanup.py') | crontab -"
+        "(crontab -l 2>/dev/null; echo '0 0 * * * /root/catbox-clone-server/venv/bin/python /root/catbox-clone-server/cleanup.py') | crontab -"
     ]
 
     for cmd in commands:
