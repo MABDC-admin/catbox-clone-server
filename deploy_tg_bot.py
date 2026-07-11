@@ -1,7 +1,7 @@
 import paramiko
 import time
 
-BOT_CODE = """
+BOT_CODE = r"""
 import telebot
 import yt_dlp
 import os
