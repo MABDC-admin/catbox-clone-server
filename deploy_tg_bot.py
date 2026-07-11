@@ -71,7 +71,7 @@ def handle_message(message):
                 
         threading.Thread(target=download).start()
     else:
-        bot.reply_to(message, "Send me ANY video link (YouTube, Dailymotion, Twitter, etc) and I'll download it straight to your Catbox-clone server without any size limits!")
+        bot.reply_to(message, "Send me ANY video link (YouTube, Facebook, Dailymotion, Twitter, TikTok, etc) and I'll download it straight to your Catbox-clone server without any size limits!")
 
 if __name__ == "__main__":
     print("Bot is polling...")
@@ -83,12 +83,13 @@ import os
 import time
 
 UPLOAD_DIR = "/home/admin/catbox-clone-server/uploads"
-cutoff_time = time.time() - (1 * 24 * 60 * 60) # 1 day
+ONE_DAY = 24 * 60 * 60
 
+now = time.time()
 for f in os.listdir(UPLOAD_DIR):
     path = os.path.join(UPLOAD_DIR, f)
     if os.path.isfile(path):
-        if os.stat(path).st_mtime < cutoff_time:
+        if os.stat(path).st_mtime < now - ONE_DAY:
             try:
                 os.remove(path)
             except:
@@ -113,7 +114,7 @@ def main():
     sftp.close()
 
     commands = [
-        "cd /home/admin/catbox-clone-server && ./venv/bin/pip install pyTelegramBotAPI yt-dlp curl-cffi",
+        "cd /home/admin/catbox-clone-server && ./venv/bin/pip install pyTelegramBotAPI yt-dlp curl-cffi flask",
         "pkill -f 'python telegram_bot.py'",
         "sleep 1",
         "cd /home/admin/catbox-clone-server && nohup ./venv/bin/python telegram_bot.py > bot.log 2>&1 &",
