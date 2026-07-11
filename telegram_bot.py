@@ -3,12 +3,44 @@ import yt_dlp
 import os
 import threading
 import re
+import json
+import glob
+from minio import Minio
 
 TOKEN = "8576316266:AAETjdNiKJ_xsv2cvjUdfnAMHv6fzeG7WoI"
 bot = telebot.TeleBot(TOKEN)
 
+MINIO_ENDPOINT = "minio.web.mabdc.org"
+BUCKET_NAME = "tg-bot-video"
+PUBLIC_URL_PREFIX = f"https://{MINIO_ENDPOINT}/{BUCKET_NAME}/"
+
+minio_client = Minio(
+    MINIO_ENDPOINT,
+    access_key="admin",
+    secret_key="Denskie123",
+    secure=True
+)
+
+def ensure_bucket():
+    try:
+        if not minio_client.bucket_exists(BUCKET_NAME):
+            minio_client.make_bucket(BUCKET_NAME)
+            policy = {
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": {"AWS": ["*"]},
+                    "Action": ["s3:GetObject"],
+                    "Resource": [f"arn:aws:s3:::{BUCKET_NAME}/*"]
+                }]
+            }
+            minio_client.set_bucket_policy(BUCKET_NAME, json.dumps(policy))
+    except Exception as e:
+        print("MinIO Init Error:", e)
+
+ensure_bucket()
+
 UPLOAD_DIR = "/home/admin/catbox-clone-server/uploads"
-PUBLIC_URL_PREFIX = "http://92.113.151.24:5001/f/"
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
@@ -45,6 +77,7 @@ def handle_message(message):
                 else:
                     ydl_opts = {
                         'format': 'bestvideo+bestaudio/best',
+                        'merge_output_format': 'mp4',
                         'outtmpl': os.path.join(UPLOAD_DIR, '%(id)s.%(ext)s'),
                         'noplaylist': True,
                         'quiet': True,
@@ -54,20 +87,46 @@ def handle_message(message):
                 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(target_url, download=True)
-                    filename = ydl.prepare_filename(info)
-                    basename = os.path.basename(filename)
-                    if is_mp3:
-                        basename = os.path.splitext(basename)[0] + ".mp3"
+                    file_id = info['id']
+                    
+                    # Find the exact file yt-dlp created (it might have changed extension to mp4/mkv/mp3)
+                    found_files = glob.glob(os.path.join(UPLOAD_DIR, f"{file_id}.*"))
+                    found_files = [f for f in found_files if not f.endswith('.part')]
+                    
+                    if not found_files:
+                        raise Exception("File was not saved correctly locally.")
+                        
+                    actual_file = found_files[0]
+                    basename = os.path.basename(actual_file)
+                    
+                    ext = basename.split('.')[-1].lower()
+                    content_type = 'application/octet-stream'
+                    if ext == 'mp4': content_type = 'video/mp4'
+                    elif ext == 'webm': content_type = 'video/webm'
+                    elif ext == 'mkv': content_type = 'video/x-matroska'
+                    elif ext == 'mp3': content_type = 'audio/mpeg'
+                    
+                    msg2 = bot.reply_to(message, "☁️ Uploading to MinIO storage...")
+                    minio_client.fput_object(
+                        BUCKET_NAME,
+                        basename,
+                        actual_file,
+                        content_type=content_type
+                    )
                     
                     public_url = PUBLIC_URL_PREFIX + basename
+                    bot.edit_message_text(f"✅ Download & Upload Complete!\n\nHere is your permanent streaming link:\n\n{public_url}", chat_id=message.chat.id, message_id=msg2.message_id)
                     
-                    bot.reply_to(message, f"✅ Download Complete!\n\nHere is your permanent streaming link:\n\n{public_url}")
+                    try:
+                        os.remove(actual_file)
+                    except:
+                        pass
             except Exception as e:
                 bot.reply_to(message, f"❌ Failed to download:\n{str(e)}")
                 
         threading.Thread(target=download).start()
     else:
-        bot.reply_to(message, "Send me ANY video link (YouTube, Dailymotion, Twitter, etc) and I'll download it straight to your Catbox-clone server without any size limits!")
+        bot.reply_to(message, "Send me ANY video link (YouTube, Facebook, Dailymotion, Twitter, TikTok, etc) and I'll download it straight to your Catbox-clone server without any size limits!")
 
 if __name__ == "__main__":
     print("Bot is polling...")
