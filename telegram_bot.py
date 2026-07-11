@@ -76,6 +76,8 @@ def handle_message(message):
                         'outtmpl': os.path.join(UPLOAD_DIR, '%(id)s.%(ext)s'),
                         'noplaylist': True,
                         'quiet': True,
+                        'geo_bypass': True,
+                        'geo_bypass_country': 'US',
                         'concurrent_fragment_downloads': concurrent_frags,
                         'postprocessors': [{
                             'key': 'FFmpegExtractAudio',
@@ -91,6 +93,8 @@ def handle_message(message):
                         'outtmpl': os.path.join(UPLOAD_DIR, '%(id)s.%(ext)s'),
                         'noplaylist': True,
                         'quiet': True,
+                        'geo_bypass': True,
+                        'geo_bypass_country': 'US',
                         'concurrent_fragment_downloads': concurrent_frags,
                         'postprocessors': [
                             {'key': 'FFmpegVideoConvertor', 'preferedformat': 'mp4'},
