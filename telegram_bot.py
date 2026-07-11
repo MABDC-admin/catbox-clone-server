@@ -50,17 +50,27 @@ def handle_message(message):
     url_match = re.search(r"(https?://[^\s]+)", text)
     if url_match:
         target_url = url_match.group(1)
-        is_mp3 = "mp3" in text.lower()
+        audio_only = "mp3" in text.lower()
         is_youtube = "youtube.com" in target_url or "youtu.be" in target_url
         concurrent_frags = 16 if is_youtube else 1
         
-        msg = "⏳ Downloading audio (MP3)..." if is_mp3 else "⏳ Downloading video..."
+        msg = "⏳ Downloading audio (MP3)..." if audio_only else "⏳ Downloading video..."
         bot.reply_to(message, msg)
         
         # Run in a separate thread so we don't block the bot
         def download():
             try:
-                if is_mp3:
+                if "tiktok.com" in target_url:
+                    # TikTok occasionally blocks yt-dlp if it tries to extract too many formats; keeping it simple
+                    ydl_opts = {
+                        'format': 'best',
+                        'outtmpl': os.path.join(UPLOAD_DIR, '%(id)s.%(ext)s'),
+                        'noplaylist': True,
+                        'quiet': True,
+                        'concurrent_fragment_downloads': concurrent_frags,
+                        'postprocessor_args': ['-threads', '4', '-movflags', '+faststart']
+                    }
+                elif audio_only:
                     ydl_opts = {
                         'format': 'bestaudio/best',
                         'outtmpl': os.path.join(UPLOAD_DIR, '%(id)s.%(ext)s'),
@@ -72,17 +82,21 @@ def handle_message(message):
                             'preferredcodec': 'mp3',
                             'preferredquality': '192',
                         }],
-                        'postprocessor_args': ['-threads', '4']
+                        'postprocessor_args': ['-threads', '4', '-movflags', '+faststart']
                     }
                 else:
                     ydl_opts = {
-                        'format': 'bestvideo+bestaudio/best',
+                        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
                         'merge_output_format': 'mp4',
                         'outtmpl': os.path.join(UPLOAD_DIR, '%(id)s.%(ext)s'),
                         'noplaylist': True,
                         'quiet': True,
                         'concurrent_fragment_downloads': concurrent_frags,
-                        'postprocessor_args': ['-threads', '4']
+                        'postprocessors': [
+                            {'key': 'FFmpegVideoConvertor', 'preferedformat': 'mp4'},
+                            {'key': 'FFmpegMetadata', 'add_metadata': True}
+                        ],
+                        'postprocessor_args': {'video': ['-threads', '4', '-movflags', '+faststart']}
                     }
                 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
