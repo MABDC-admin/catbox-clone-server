@@ -76,17 +76,21 @@ def handle_message(message):
                             'preferredcodec': 'mp3',
                             'preferredquality': '192',
                         }],
-                        'postprocessor_args': ['-threads', '4']
+                        'postprocessor_args': ['-threads', '4', '-movflags', '+faststart']
                     }
                 else:
                     ydl_opts = {
-                        'format': 'bestvideo+bestaudio/best',
+                        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
                         'merge_output_format': 'mp4',
                         'outtmpl': os.path.join(UPLOAD_DIR, '%(id)s.%(ext)s'),
                         'noplaylist': True,
                         'quiet': True,
                         'concurrent_fragment_downloads': concurrent_frags,
-                        'postprocessor_args': ['-threads', '4']
+                        'postprocessors': [
+                            {'key': 'FFmpegVideoConvertor', 'preferedformat': 'mp4'},
+                            {'key': 'FFmpegMetadata', 'add_metadata': True}
+                        ],
+                        'postprocessor_args': {'video': ['-threads', '4', '-movflags', '+faststart']}
                     }
                 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
