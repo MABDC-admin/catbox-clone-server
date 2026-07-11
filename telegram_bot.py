@@ -16,7 +16,7 @@ def handle_message(message):
     
     # Check if there is a URL
     url_match = re.search(r"(https?://[^\s]+)", text)
-    if url_match and ("youtube.com" in text or "youtu.be" in text):
+    if url_match:
         target_url = url_match.group(1)
         is_mp3 = "mp3" in text.lower()
         
@@ -65,7 +65,7 @@ def handle_message(message):
                 
         threading.Thread(target=download).start()
     else:
-        bot.reply_to(message, "Send me a YouTube link and I'll download it straight to your Catbox-clone server without any size limits!")
+        bot.reply_to(message, "Send me ANY video link (YouTube, Dailymotion, Twitter, etc) and I'll download it straight to your Catbox-clone server without any size limits!")
 
 if __name__ == "__main__":
     print("Bot is polling...")
