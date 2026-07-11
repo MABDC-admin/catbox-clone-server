@@ -18,24 +18,44 @@ def handle_message(message):
     url_match = re.search(r"(https?://[^\s]+)", text)
     if url_match and ("youtube.com" in text or "youtu.be" in text):
         target_url = url_match.group(1)
-        bot.reply_to(message, "⏳ Downloading video to server... (No file size limits!)")
+        is_mp3 = "mp3" in text.lower()
+        
+        msg = "⏳ Downloading audio (MP3)..." if is_mp3 else "⏳ Downloading video..."
+        bot.reply_to(message, msg)
         
         # Run in a separate thread so we don't block the bot
         def download():
             try:
-                ydl_opts = {
-                    'format': 'bestvideo+bestaudio/best', # Switched to DASH formats to allow 16x fragment parallel downloads
-                    'outtmpl': os.path.join(UPLOAD_DIR, '%(id)s.%(ext)s'),
-                    'noplaylist': True,
-                    'quiet': True,
-                    'concurrent_fragment_downloads': 16,
-                    'postprocessor_args': ['-threads', '4'] # VPS has 4 cores
-                }
+                if is_mp3:
+                    ydl_opts = {
+                        'format': 'bestaudio/best',
+                        'outtmpl': os.path.join(UPLOAD_DIR, '%(id)s.%(ext)s'),
+                        'noplaylist': True,
+                        'quiet': True,
+                        'concurrent_fragment_downloads': 16,
+                        'postprocessors': [{
+                            'key': 'FFmpegExtractAudio',
+                            'preferredcodec': 'mp3',
+                            'preferredquality': '192',
+                        }],
+                        'postprocessor_args': ['-threads', '4']
+                    }
+                else:
+                    ydl_opts = {
+                        'format': 'bestvideo+bestaudio/best',
+                        'outtmpl': os.path.join(UPLOAD_DIR, '%(id)s.%(ext)s'),
+                        'noplaylist': True,
+                        'quiet': True,
+                        'concurrent_fragment_downloads': 16,
+                        'postprocessor_args': ['-threads', '4']
+                    }
                 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(target_url, download=True)
                     filename = ydl.prepare_filename(info)
                     basename = os.path.basename(filename)
+                    if is_mp3:
+                        basename = os.path.splitext(basename)[0] + ".mp3"
                     
                     public_url = PUBLIC_URL_PREFIX + basename
                     
